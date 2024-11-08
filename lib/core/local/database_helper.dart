@@ -47,7 +47,6 @@ class DatabaseHelper {
   }
 
   void _onCreate(Database db, int version) async {
-    // Create courses table
     await db.execute('''
     CREATE TABLE $coursesTable (
       id TEXT PRIMARY KEY,
@@ -55,8 +54,6 @@ class DatabaseHelper {
       author TEXT
     )
   ''');
-
-    // Create chapters table with a foreign key linking to coursesTable
     await db.execute('''
     CREATE TABLE $chaptersTable (
       id TEXT PRIMARY KEY,
@@ -65,8 +62,6 @@ class DatabaseHelper {
       FOREIGN KEY (courseId) REFERENCES $coursesTable(id) ON DELETE CASCADE
     )
   ''');
-
-    // Updated media table to store media for both courses and chapters
     await db.execute('''
     CREATE TABLE $mediaTable (
       id TEXT PRIMARY KEY,
@@ -76,32 +71,6 @@ class DatabaseHelper {
       path TEXT)
   ''');
   }
-
-  Future<List<Map<String, dynamic>>> getCoursesWithContent() async {
-    var dbClient = await db;
-    List<Map<String, dynamic>> courses = await dbClient.query(coursesTable);
-    for (var course in courses) {
-      // Get chapters for each course
-      List<Map<String, dynamic>> chapters = await dbClient.query(
-        'chaptersTable',
-        where: 'courseId = ?',
-        whereArgs: [course['id']],
-      );
-      for (var chapter in chapters) {
-        // Get media for each chapter
-        List<Map<String, dynamic>> media = await dbClient.query(
-          mediaTable,
-          where: 'chapterId = ?',
-          whereArgs: [chapter['id']],
-        );
-        chapter['media'] = media; // Add media to the chapter
-      }
-      course['chapters'] = chapters; // Add chapters to the course
-    }
-    return courses;
-  }
-
-
 
   Future close() async {
     var dbProjects = await db;

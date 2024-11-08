@@ -1,26 +1,10 @@
 import 'dart:io';
-
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
-import 'package:youtube_download/core/local/models/chapter_entity.dart';
-import 'package:youtube_download/core/local/models/course_entity.dart';
-import 'package:youtube_download/core/local/models/media_entity.dart';
-import 'package:youtube_download/core/local/repositories/coourses_local_repository.dart';
 import 'dart:developer' as developer;
-
 import 'core/helpers/youtube_video_downloader.dart';
 
-// const String linkYoutube = 'https://youtu.be/PfU4cG3WZF8?si=axTCK0gk3Lq4qhkk'; //da7e7 28 min video took 6 min
 
-// const String linkYoutube =
-//     'https://youtu.be/rYEDA3JcQqw?si=cC2FI0sfGGoXGiCy'; //adele
-
-const String linkYoutube = 'https://youtu.be/ZK-rNEhJIDs?si=4B4y34mIQrnbTwPi';
-const String linkImage =
-    'https://hips.hearstapps.com/hmg-prod/images/adele-attends-the-brit-awards-2022-at-the-o2-arena-on-news-photo-1709739132.jpg';
 
 class YoutubePage extends StatefulWidget {
   const YoutubePage({super.key});
@@ -44,10 +28,10 @@ class _YoutubePageState extends State<YoutubePage> {
   void initState() {
     super.initState();
     _initializeDownloader();
-    // _getFromLocalDataBase();
   }
 
   Future<void> _initializeDownloader() async {
+    const String linkYoutube = 'https://youtu.be/ZK-rNEhJIDs?si=4B4y34mIQrnbTwPi';
     setState(() => _errorOccurred = false);
     _youtubeVideoDownloader = YoutubeVideoDownloader(
       linkYoutube,
@@ -55,7 +39,6 @@ class _YoutubePageState extends State<YoutubePage> {
           setState(() => _downloadProgress = percentage),
       onMergeProgress: (isMerging) => setState(() => _isMerging = isMerging),
     );
-
     try {
       videoFile = await _youtubeVideoDownloader.download();
       setState(() {
@@ -63,9 +46,7 @@ class _YoutubePageState extends State<YoutubePage> {
         _videoPlayerController = VideoPlayerController.file(videoFile);
         _isVideoReady = true;
       });
-
       _initializeVideoPlayer();
-      _storeToLocalDataBase();
     } catch (e) {
       developer.log("Error downloading video: $e");
       setState(() => _errorOccurred = true);
@@ -75,83 +56,6 @@ class _YoutubePageState extends State<YoutubePage> {
     }
   }
 
-  _getFromLocalDataBase() async {
-    CourseLocalRepository().getAll().then(
-      (value) {
-        courses = value;
-        for (var c in courses) {
-          print('${c.toMap()}');
-        }
-        print(
-            'courses[1].chapters.firstOrNull?.media.firstOrNull?.path ${courses[1].chapters.firstOrNull?.media.firstOrNull?.path}');
-
-        videoFile = File(
-            courses[1].chapters.firstOrNull?.media.firstOrNull?.path ?? '');
-        setState(() {
-          _title = courses.firstOrNull?.chapters.firstOrNull?.title ?? '';
-          _videoPlayerController = VideoPlayerController.file(videoFile);
-          _isVideoReady = true;
-          _initializeVideoPlayer();
-        });
-      },
-    );
-  }
-
-  List<CourseEntity> courses = [];
-
-  _storeToLocalDataBase() async {
-    final courseId = Uuid().v1();
-    final chapterId = Uuid().v1();
-
-    CourseLocalRepository().add(
-      CourseEntity(
-        id: courseId,
-        title: _youtubeVideoDownloader.videoInfo?.title ?? '',
-        author: _youtubeVideoDownloader.videoInfo?.author ?? '',
-      ),
-    );
-    CourseLocalRepository().addChapter(
-      ChapterEntity(
-        id: chapterId,
-        courseId: courseId,
-        title:
-            'chapter $chapterId ${_youtubeVideoDownloader.videoInfo?.title ?? ''}',
-      ),
-    );
-    String localImagePath =
-        await downloadAndSaveImageWithDio(linkImage, '$courseId.jpg');
-    CourseLocalRepository().addMedia(
-      MediaEntity(
-        id: '$courseId-image',
-        parentId: courseId,
-        parentType: 'course',
-        mediaType: 'image',
-        path: localImagePath,
-      ),
-    );
-
-    CourseLocalRepository().addMedia(
-      MediaEntity(
-        id: '$chapterId-video1',
-        parentId: chapterId,
-        parentType: 'chapter',
-        mediaType: 'video',
-        path: videoFile.path,
-      ),
-    );
-  }
-
-  Future<String> downloadAndSaveImageWithDio(
-      String imageUrl, String imageName) async {
-    Directory directory = await getApplicationDocumentsDirectory();
-    String imagePath = '${directory.path}/$imageName';
-    try {
-      await Dio().download(imageUrl, imagePath);
-      return imagePath;
-    } catch (e) {
-      throw Exception("Failed to download image: $e");
-    }
-  }
 
   @override
   void dispose() {

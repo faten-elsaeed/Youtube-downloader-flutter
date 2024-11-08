@@ -4,8 +4,35 @@ import 'package:path_provider/path_provider.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'dart:developer' as developer;
 
+/* //////// Example Usage //////////
+  Future<void> _initializeDownloader() async {
+    setState(() => _errorOccurred = false);
+    _youtubeVideoDownloader = YoutubeVideoDownloader(
+      linkYoutube,
+      onDownloadProgress: (percentage) =>
+          setState(() => _downloadProgress = percentage),
+      onMergeProgress: (isMerging) => setState(() => _isMerging = isMerging),
+    );
+    try {
+      videoFile = await _youtubeVideoDownloader.download();
+      setState(() {
+        _title = _youtubeVideoDownloader.videoInfo?.title ?? '';
+        _videoPlayerController = VideoPlayerController.file(videoFile);
+        _isVideoReady = true;
+      });
+      _initializeVideoPlayer();
+    } catch (e) {
+      developer.log("Error downloading video: $e");
+      setState(() => _errorOccurred = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to download video")),
+      );
+    }
+  }
+* */
+
 class YoutubeVideoDownloader {
-  final String linkYoutube;
+  final String url;
   final Function(double percentage)? onDownloadProgress;
   final Function(bool isMerging)? onMergeProgress;
   final YoutubeExplode _yt = YoutubeExplode();
@@ -13,16 +40,14 @@ class YoutubeVideoDownloader {
   late String _title;
   late String _mergedFilePath;
 
-  YoutubeVideoDownloader(this.linkYoutube,
+  YoutubeVideoDownloader(this.url,
       {this.onDownloadProgress, this.onMergeProgress});
 
-  void _dispose() {
-    _yt.close();
-  }
+  void _dispose() => _yt.close();
 
   Future<Video> _getVideoInfo() async {
     if (videoInfo == null) {
-      videoInfo = await _yt.videos.get(linkYoutube);
+      videoInfo = await _yt.videos.get(url);
       _title = videoInfo!.title;
       developer.log('Video info - Title: $_title');
     }
@@ -53,7 +78,7 @@ class YoutubeVideoDownloader {
   }
 
   Future<StreamManifest> _getStreamManifest() async {
-    return await _yt.videos.streams.getManifest(extractVideoId(linkYoutube));
+    return await _yt.videos.streams.getManifest(extractVideoId(url));
   }
 
   Future<File> _downloadStream(
@@ -96,8 +121,7 @@ class YoutubeVideoDownloader {
       caseSensitive: false,
       multiLine: false,
     );
-
     final match = regExp.firstMatch(url);
-    return match != null ? match.group(1) : null;
+    return match?.group(1);
   }
 }

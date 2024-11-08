@@ -4,7 +4,7 @@ class CourseEntity {
   final String id;
   final String title;
   final String author;
-  final String? image; // Path to the image file (optional)
+  final String? image;
   final List<ChapterEntity> chapters;
 
   CourseEntity({
@@ -15,7 +15,6 @@ class CourseEntity {
     this.chapters = const [],
   });
 
-  // Convert Course instance to a map for database storage
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -24,16 +23,16 @@ class CourseEntity {
     };
   }
 
-  // Create a Course instance from a map and optional image path
-  factory CourseEntity.fromMap(Map<String, dynamic> map, {String? image}) {
+  factory CourseEntity.fromMap(Map<String, dynamic> map) {
     return CourseEntity(
       id: map['id'],
       title: map['title'],
       author: map['author'],
       image: map['image'],
       chapters: (map['chapters'] as List<dynamic>?)
-          ?.map((chapterData) => ChapterEntity.fromMap(chapterData))
-          .toList() ?? [],
+              ?.map((chapterData) => ChapterEntity.fromMap(chapterData))
+              .toList() ??
+          [],
     );
   }
 }

@@ -1,10 +1,50 @@
 import 'package:youtube_download/core/local/models/chapter_entity.dart';
 import 'package:youtube_download/core/local/models/media_entity.dart';
-
 import '../database_helper.dart';
 import 'base_local_repository.dart';
 import '../models/course_entity.dart';
 import '../local_mapper.dart';
+
+/*//////////////Example Usage////////////////
+  _storeToLocalDataBase() async {
+    final courseId = Uuid().v1();
+    final chapterId = Uuid().v1();
+    CourseLocalRepository().add(
+      CourseEntity(
+        id: courseId,
+        title: _youtubeVideoDownloader.videoInfo?.title ?? '',
+        author: _youtubeVideoDownloader.videoInfo?.author ?? '',
+      ),
+    );
+    CourseLocalRepository().addChapter(
+      ChapterEntity(
+        id: chapterId,
+        courseId: courseId,
+        title:
+            'chapter $chapterId ${_youtubeVideoDownloader.videoInfo?.title ?? ''}',
+      ),
+    );
+    String localImagePath =
+        await downloadAndSaveImageWithDio(linkImage, '$courseId.jpg');
+    CourseLocalRepository().addMedia(
+      MediaEntity(
+        id: '$courseId-image',
+        parentId: courseId,
+        parentType: 'course',
+        mediaType: 'image',
+        path: localImagePath,
+      ),
+    );
+    CourseLocalRepository().addMedia(
+      MediaEntity(
+        id: '$chapterId-video1',
+        parentId: chapterId,
+        parentType: 'chapter',
+        mediaType: 'video',
+        path: videoFile.path,
+      ),
+    );
+  } */
 
 class CourseLocalRepository extends BaseLocalRepository
     implements LocalMapper<CourseEntity> {
@@ -27,61 +67,40 @@ class CourseLocalRepository extends BaseLocalRepository
   @override
   Future<List<CourseEntity>> getAll() async {
     var db = await dataBase.db;
-    List<Map<String, dynamic>> result = await db.query(DatabaseHelper.coursesTable);
-
-    // List to store the modified course objects with image and chapters
+    List<Map<String, dynamic>> result =
+        await db.query(DatabaseHelper.coursesTable);
     List<Map<String, dynamic>> coursesWithDetails = [];
-
     for (var course in result) {
-      // Create a mutable copy of the read-only course map
       var courseCopy = Map<String, dynamic>.from(course);
-
-      // Get the course image from media table
       List<Map<String, dynamic>> courseImageMedia = await db.query(
         DatabaseHelper.mediaTable,
         where: 'parentId = ? AND parentType = ? AND mediaType = ?',
         whereArgs: [course['id'], 'course', 'image'],
       );
-
-      // Set the image path if available, otherwise null
-      courseCopy['image'] = courseImageMedia.isNotEmpty ? courseImageMedia.first['path'] : null;
-
-      // Get chapters for each course
+      courseCopy['image'] =
+          courseImageMedia.isNotEmpty ? courseImageMedia.first['path'] : null;
       List<Map<String, dynamic>> chapters = await db.query(
         DatabaseHelper.chaptersTable,
         where: 'courseId = ?',
         whereArgs: [course['id']],
       );
-
-      // List to hold mutable copies of chapters
       List<Map<String, dynamic>> chaptersList = [];
-
       for (var chapter in chapters) {
-        // Create a mutable copy of the read-only chapter map
         var chapterCopy = Map<String, dynamic>.from(chapter);
-
-        // Get media for each chapter
         List<Map<String, dynamic>> chapterMedia = await db.query(
           DatabaseHelper.mediaTable,
           where: 'parentId = ? AND parentType = ?',
           whereArgs: [chapter['id'], 'chapter'],
         );
-
-        // Assign media list to chapter copy
         chapterCopy['media'] = chapterMedia;
-
-        // Add the modified chapter to the chapters list
         chaptersList.add(chapterCopy);
       }
-
-      // Assign the modified chapters list back to the course copy
       courseCopy['chapters'] = chaptersList;
-
-      // Add modified course copy to the list
       coursesWithDetails.add(courseCopy);
     }
-
-    return coursesWithDetails.map((data) => CourseEntity.fromMap(data)).toList();
+    return coursesWithDetails
+        .map((data) => CourseEntity.fromMap(data))
+        .toList();
   }
 
   @override
@@ -98,4 +117,16 @@ class CourseLocalRepository extends BaseLocalRepository
   Future<int> edit(type) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<CourseEntity?> get(String id) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<CourseEntity>> search(String character) {
+    throw UnimplementedError();
+  }
 }
+
+
