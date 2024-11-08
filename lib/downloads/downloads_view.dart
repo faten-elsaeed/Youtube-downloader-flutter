@@ -5,6 +5,8 @@ import 'downloads_cubit.dart';
 import 'downloads_state.dart';
 
 class DownloadsPage extends StatelessWidget {
+  const DownloadsPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(

@@ -5,15 +5,16 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'dart:developer' as developer;
 
 class YoutubeVideoDownloader {
-  final String linkYoutube, idYoutube;
+  final String linkYoutube;
   final Function(double percentage)? onDownloadProgress;
+  final Function(bool isMerging)? onMergeProgress;
   final YoutubeExplode _yt = YoutubeExplode();
   Video? videoInfo;
   late String _title;
   late String _mergedFilePath;
 
-  YoutubeVideoDownloader(this.linkYoutube, this.idYoutube,
-      {this.onDownloadProgress});
+  YoutubeVideoDownloader(this.linkYoutube,
+      {this.onDownloadProgress, this.onMergeProgress});
 
   void _dispose() {
     _yt.close();
@@ -44,13 +45,15 @@ class YoutubeVideoDownloader {
           _yt.videos.streams.get(audioOnly), 'audio', totalAudioBytes),
     ]);
 
+    onMergeProgress?.call(true);
     await _mergeAudioAndVideo(downloadedFiles[0].path, downloadedFiles[1].path);
+    onMergeProgress?.call(false);
     _dispose();
     return File(_mergedFilePath);
   }
 
   Future<StreamManifest> _getStreamManifest() async {
-    return await _yt.videos.streams.getManifest(idYoutube);
+    return await _yt.videos.streams.getManifest(extractVideoId(linkYoutube));
   }
 
   Future<File> _downloadStream(
@@ -85,5 +88,16 @@ class YoutubeVideoDownloader {
     await FFmpegKit.execute(ffmpegCommand);
 
     developer.log('Merging complete: $_mergedFilePath');
+  }
+
+  String? extractVideoId(String url) {
+    final regExp = RegExp(
+      r'^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})',
+      caseSensitive: false,
+      multiLine: false,
+    );
+
+    final match = regExp.firstMatch(url);
+    return match != null ? match.group(1) : null;
   }
 }
